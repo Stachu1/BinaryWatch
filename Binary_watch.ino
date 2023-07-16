@@ -33,7 +33,7 @@ NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
 uint8_t brightness = 255;
 bool sleeping = false;
-uint64_t last_interaction_millis = 0;
+uint32_t last_interaction_millis = 0;
 
 
 
@@ -46,14 +46,14 @@ struct TimeDate {
 struct StopWatch {
   bool show = false;
   bool active = false;
-  uint16_t value = 0;
-  uint64_t startMillis = 0;
+  uint32_t value = 0;
+  uint32_t startMillis = 0;
 };
 
 
 struct TimeUpdating {
   bool active = false;
-  uint64_t activeMillis = 0;
+  uint32_t activeMillis = 0;
 };
 
 
@@ -62,7 +62,7 @@ struct Button {
   bool isHeld = false;
   bool wasPressed = false;
   bool wasHeld = false;
-  uint64_t downMillis = 0;
+  uint32_t downMillis = 0;
 };
 
 
@@ -83,7 +83,7 @@ float getBatteryVoltage() {
 
 
 void updateButtons() {
-  uint64_t current_millis = millis();
+  uint32_t current_millis = millis();
   uint8_t sw1_state = digitalRead(SW1);
   uint8_t sw2_state = digitalRead(SW2);
   uint8_t sw3_state = digitalRead(SW3);
@@ -216,7 +216,7 @@ void displayValue(uint8_t value = 0, bool mode_led_top = false, bool mode_led_bo
   
 
   static bool displaying_tens = true;
-  static uint64_t last_update = 0;
+  static uint32_t last_update = 0;
 
   if (update) {
     tens = value / 10;
@@ -290,7 +290,7 @@ void displayWipe() {
 
 
 void loadingAnimation(bool reset = false, uint16_t interval = 100) {
-  static uint64_t last_update = 0;
+  static uint32_t last_update = 0;
   static uint8_t step = 0;
 
   if (reset) {
@@ -493,7 +493,7 @@ void timeClientStart() {
 
 
 void updateUserInterface() {
-  uint64_t current_millis = millis();
+  uint32_t current_millis = millis();
 
   if (sleeping) {
     if (current_millis - last_interaction_millis < SLEEP_AFTER) {
@@ -613,6 +613,49 @@ void updateUserInterface() {
         else if (brightness < 255) {
           brightness += 51;
         }
+      }
+      else {
+        if (stopWatch.show) {
+          if (stopWatch.active) {
+            stopWatch.active = false;
+          }
+          else {
+            stopWatch.active = true;
+            if (stopWatch.value == 0) {
+              stopWatch.startMillis = current_millis;
+            }
+          }
+        }
+        else {
+          stopWatch.show = true;
+          timeDate.show = false;
+          timeUpdating.active = false;
+          if (stopWatch.value == 0) {
+            displayValue(0, true, true, true);
+          }
+        }
+      }
+    }
+
+    if (button_3.wasHeld) {
+      stopWatch.show = true;
+      timeDate.show = false;
+      timeUpdating.active = false;
+      stopWatch.active = false;
+      stopWatch.value = 0;
+      displayValue(0, true, true, true);
+    }
+
+    if (stopWatch.active) {
+      stopWatch.value = current_millis - stopWatch.startMillis;
+    }
+
+    if (stopWatch.show && !sleeping) {
+      if (stopWatch.active) {
+        displayValue((stopWatch.value / 1000), false, false, true);
+      }
+      else {
+        displayValue();
       }
     }
   }
